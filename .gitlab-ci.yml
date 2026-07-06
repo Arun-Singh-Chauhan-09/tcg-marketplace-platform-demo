@@ -1,0 +1,138 @@
+# GitLab CI pipeline for tcg-marketplace-platform-demo
+# Stages: lint -> test -> build -> scan -> validate-infra -> deploy
+# Deploys are manual gates (protected env), image build uses Kaniko (no docker-in-docker privileges needed).
+
+stages:
+  - lint
+  - test
+  - build
+  - scan
+  - validate-infra
+  - deploy
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE/tcg-marketplace
+  TAG: $CI_COMMIT_SHORT_SHA
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+default:
+  interruptible: true
+
+cache:
+  key:
+    files: [app/requirements.txt]
+  paths: [.cache/pip]
+
+# ---------- lint ----------
+lint:python:
+  stage: lint
+  image: python:3.12-slim
+  script:
+    - pip install ruff
+    - ruff check app/
+    - ruff format --check app/
+
+lint:helm:
+  stage: lint
+  image: alpine/helm:3.15.2
+  script:
+    - helm lint helm/tcg-marketplace
+
+lint:dockerfile:
+  stage: lint
+  image: hadolint/hadolint:latest-debian
+  script:
+    - hadolint app/Dockerfile
+
+# ---------- test ----------
+test:pytest:
+  stage: test
+  image: python:3.12-slim
+  services:
+    - name: mysql:8.4
+      alias: mysql
+    - name: redis:7-alpine
+      alias: redis
+  variables:
+    MYSQL_DATABASE: cards
+    MYSQL_ROOT_PASSWORD: test
+    DATABASE_URL: mysql+pymysql://root:test@mysql:3306/cards
+    REDIS_URL: redis://redis:6379/0
+  script:
+    - pip install -r app/requirements.txt -r app/requirements-dev.txt
+    - pytest app/tests -v --junitxml=report.xml --cov=app --cov-report=term
+  coverage: '/TOTAL.*\s(\d+%)/'
+  artifacts:
+    reports:
+      junit: report.xml
+
+# ---------- build ----------
+build:image:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  script:
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR/app"
+      --dockerfile "$CI_PROJECT_DIR/app/Dockerfile"
+      --destination "$IMAGE:$TAG"
+      --destination "$IMAGE:latest"
+      --cache=true
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ---------- scan ----------
+scan:trivy:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy image --exit-code 0 --severity LOW,MEDIUM "$IMAGE:$TAG"
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL "$IMAGE:$TAG"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ---------- validate infra ----------
+terraform:plan:
+  stage: validate-infra
+  image: hashicorp/terraform:1.9
+  script:
+    - cd terraform/envs/dev
+    - terraform init -backend=false
+    - terraform validate
+    - terraform plan -out=tfplan || true   # plan requires AWS creds; validate is the gate
+  artifacts:
+    paths: [terraform/envs/dev/tfplan]
+    expire_in: 1 week
+
+cloudflare:plan:
+  stage: validate-infra
+  image: hashicorp/terraform:1.9
+  script:
+    - cd cloudflare
+    - terraform init -backend=false
+    - terraform validate
+
+# ---------- deploy ----------
+deploy:dev:
+  stage: deploy
+  image:
+    name: alpine/helm:3.15.2
+    entrypoint: [""]
+  environment:
+    name: dev
+    url: https://tcg-dev.example.com
+  before_script:
+    - apk add --no-cache aws-cli kubectl
+    - aws eks update-kubeconfig --name tcg-demo-dev --region eu-central-1
+  script:
+    - helm upgrade --install tcg helm/tcg-marketplace
+      -n marketplace --create-namespace
+      --set image.repository="$IMAGE"
+      --set image.tag="$TAG"
+      --wait --timeout 5m
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual

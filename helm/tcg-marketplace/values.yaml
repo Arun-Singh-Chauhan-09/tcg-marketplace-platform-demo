@@ -1,0 +1,30 @@
+replicaCount: 2
+
+image:
+  repository: registry.gitlab.com/REPLACE/tcg-marketplace
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  requests: { cpu: 100m, memory: 128Mi }
+  limits: { cpu: 500m, memory: 256Mi }
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+env:
+  MYSQL_HOST: mysql.marketplace.svc.cluster.local
+  REDIS_URL: redis://redis-master.marketplace.svc.cluster.local:6379/0
+
+service:
+  type: ClusterIP
+  port: 8000
+
+serviceMonitor:
+  enabled: true   # requires kube-prometheus-stack CRDs
+
+podDisruptionBudget:
+  minAvailable: 1

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tcg.fullname" . }}
+  labels: {{- include "tcg.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8000
+      name: http
+  selector: {{- include "tcg.selectorLabels" . | nindent 4 }}

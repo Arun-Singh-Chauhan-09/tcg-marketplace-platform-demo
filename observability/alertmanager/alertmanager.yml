@@ -1,0 +1,12 @@
+route:
+  receiver: default
+  group_by: [alertname]
+  routes:
+    - matchers: [severity="page"]
+      receiver: oncall
+
+receivers:
+  - name: default
+  - name: oncall
+    # webhook_configs:
+    #   - url: https://hooks.slack.com/services/REPLACE_ME

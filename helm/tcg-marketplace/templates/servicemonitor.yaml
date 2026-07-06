@@ -1,0 +1,14 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "tcg.fullname" . }}
+  labels: {{- include "tcg.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "tcg.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}

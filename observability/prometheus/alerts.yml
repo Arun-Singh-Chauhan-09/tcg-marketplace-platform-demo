@@ -1,0 +1,39 @@
+groups:
+  - name: marketplace-slo
+    rules:
+      - alert: PriceApiHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{path="/cards/{card_id}/price"}[5m])) by (le)
+          ) > 0.3
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "Price API p95 latency above 300ms"
+          description: "Buyers see slow price lookups; check Redis health and MySQL slow queries."
+
+      - alert: RedisCacheHitRateLow
+        expr: |
+          rate(price_cache_hits_total[10m])
+          / (rate(price_cache_hits_total[10m]) + rate(price_cache_misses_total[10m])) < 0.8
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: "Price cache hit-rate below 80%"
+          description: "MySQL is taking read traffic the cache should absorb; check TTLs / evictions."
+
+      - alert: SearchErrorRateHigh
+        expr: |
+          sum(rate(http_request_duration_seconds_count{path="/cards/search",status=~"5.."}[5m]))
+          / sum(rate(http_request_duration_seconds_count{path="/cards/search"}[5m])) > 0.02
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "Card search 5xx error rate above 2%"
+
+      - alert: AppDown
+        expr: up{job="tcg-marketplace"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Marketplace API target down"

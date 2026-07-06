@@ -1,0 +1,6 @@
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+pymysql==1.1.*
+redis==5.*
+prometheus-client==0.20.*
+cryptography==43.*
