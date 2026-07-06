@@ -34,7 +34,9 @@ lint:python:
 
 lint:helm:
   stage: lint
-  image: alpine/helm:3.15.2
+  image:
+    name: alpine/helm:3.15.2
+    entrypoint: [""]
   script:
     - helm lint helm/tcg-marketplace
 
