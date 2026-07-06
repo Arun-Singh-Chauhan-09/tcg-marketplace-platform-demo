@@ -11,12 +11,14 @@ stages:
   - deploy
 
 variables:
-    MYSQL_DATABASE: cards
-    MYSQL_ROOT_PASSWORD: test
-    MYSQL_HOST: mysql
-    MYSQL_USER: root
-    MYSQL_PASSWORD: test
-    REDIS_URL: redis://redis:6379/0
+  IMAGE: $CI_REGISTRY_IMAGE/tcg-marketplace
+  TAG: $CI_COMMIT_SHORT_SHA
+  MYSQL_DATABASE: cards
+  MYSQL_ROOT_PASSWORD: test
+  MYSQL_HOST: mysql
+  MYSQL_USER: root
+  MYSQL_PASSWORD: test
+  REDIS_URL: redis://redis:6379/0
 
 default:
   interruptible: true
