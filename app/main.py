@@ -15,6 +15,7 @@ import redis
 from fastapi import FastAPI, HTTPException, Request
 from prometheus_client import Counter, Histogram, make_asgi_app
 
+
 # ---------- structured JSON logging ----------
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
