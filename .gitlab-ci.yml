@@ -11,9 +11,12 @@ stages:
   - deploy
 
 variables:
-  IMAGE: $CI_REGISTRY_IMAGE/tcg-marketplace
-  TAG: $CI_COMMIT_SHORT_SHA
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    MYSQL_DATABASE: cards
+    MYSQL_ROOT_PASSWORD: test
+    MYSQL_HOST: mysql
+    MYSQL_USER: root
+    MYSQL_PASSWORD: test
+    REDIS_URL: redis://redis:6379/0
 
 default:
   interruptible: true
