@@ -79,7 +79,7 @@ curl "localhost:8000/cards/1/price"
 # Grafana (anonymous admin, datasources pre-provisioned)
 open http://localhost:3000
 ```
-
+![Cache miss then hit — Redis serving the second call](docs/images/code.png)
 Services started: `app`, `mysql`, `redis`, `prometheus`, `alertmanager`, `grafana`, `loki`, `promtail`.
 
 Verify the observability chain:
@@ -152,6 +152,7 @@ helm upgrade --install tcg helm/tcg-marketplace -n marketplace --create-namespac
 - **Metrics** — the app exposes `/metrics` with custom counters (`price_cache_hits_total`, `price_cache_misses_total`) and a request-latency histogram. Prometheus scrapes it; Grafana visualises it.
 - **Alerts** — marketplace-flavoured SLO rules in `observability/prometheus/alerts.yml`: price-API p95 latency > 300ms, cache hit-rate < 80%, search 5xx rate > 2%, and target-down.
 - **Logs** — the app emits structured JSON to stdout. Promtail ships it to Loki, promoting only low-cardinality fields (`level`, `service`) to labels. The full design rationale, including why Loki over Elasticsearch and how retention would tier in production, is in [`docs/LOGGING.md`](docs/LOGGING.md).
+![Grafana dashboard with Prometheus and Loki datasources](docs/images/grafana.png)
 
 ---
 
