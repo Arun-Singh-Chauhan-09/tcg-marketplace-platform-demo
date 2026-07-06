@@ -105,7 +105,9 @@ scan:trivy:
 # ---------- validate infra ----------
 terraform:plan:
   stage: validate-infra
-  image: hashicorp/terraform:1.9
+  image:
+    name: hashicorp/terraform:1.9
+    entrypoint: [""]
   script:
     - cd terraform/envs/dev
     - terraform init -backend=false
@@ -117,7 +119,9 @@ terraform:plan:
 
 cloudflare:plan:
   stage: validate-infra
-  image: hashicorp/terraform:1.9
+  image:
+    name: hashicorp/terraform:1.9
+    entrypoint: [""]
   script:
     - cd cloudflare
     - terraform init -backend=false
