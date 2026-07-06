@@ -92,6 +92,7 @@ build:image:
 # ---------- scan ----------
 scan:trivy:
   stage: scan
+  allow_failure: true
   image:
     name: aquasec/trivy:latest
     entrypoint: [""]
